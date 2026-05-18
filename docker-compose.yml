@@ -1,0 +1,25 @@
+services:
+  spark-master:
+    image: apache/spark:3.5.1
+    container_name: spark-master
+    # Odpalamy główny proces zarządzający klastrem
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "8080:8080" # Web UI Mastera (sprawdzisz tu, czy worker się podłączył)
+      - "7077:7077" # Port RPC - tu łączy się Twój kod w Pythonie
+    volumes:
+      - ./data:/opt/spark/data
+
+  spark-worker:
+    image: apache/spark:3.5.1
+    container_name: spark-worker
+    # Odpalamy workera i podpinamy go pod Mastera
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    ports:
+      - "8081:8081" # Web UI Workera
+    depends_on:
+      - spark-master
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data:/opt/spark/data

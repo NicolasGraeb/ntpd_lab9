@@ -1,0 +1,10 @@
+[project]
+name = "lab9"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    # Ta sama wersja co obraz apache/spark:3.5.1 w docker-compose.yml
+    "pyspark==3.5.1",
+]
