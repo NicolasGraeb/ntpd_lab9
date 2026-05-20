@@ -15,3 +15,4 @@ wheels/
 spark-warehouse/
 metastore_db/
 derby.log
+output/
