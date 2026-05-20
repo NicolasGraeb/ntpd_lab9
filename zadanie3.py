@@ -1,13 +1,7 @@
-"""
-Zadanie 3: Praca z RDD w PySpark.
-Wczytanie CSV jako RDD, ręczne parsowanie wierszy, transformacje i akcje.
-"""
-
 import os
 import sys
 from pathlib import Path
 
-# Spark musi używać tego samego Pythona co venv (nie 3.13 z Windows Store).
 os.environ["PYSPARK_PYTHON"] = sys.executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
 
@@ -44,7 +38,6 @@ if IN_DOCKER and not DOCKER_CSV_PATH.is_file():
 if not IN_DOCKER and not LOCAL_CSV.is_file():
     raise FileNotFoundError(f"Brak pliku: {LOCAL_CSV}")
 
-# Kolumny w CSV (nagłówek)
 COLUMNS = [
     "invoice_id",
     "branch",
@@ -67,7 +60,6 @@ COLUMNS = [
 
 
 def parse_line(line: str) -> dict | None:
-    """Parsuj jeden wiersz CSV (bez biblioteki — split po przecinku)."""
     parts = line.split(",")
     if len(parts) != len(COLUMNS):
         return None
@@ -106,7 +98,6 @@ sc = spark.sparkContext
 
 csv_path = str(DOCKER_CSV_PATH) if IN_DOCKER else LOCAL_CSV.as_uri()
 
-# --- 1. Wczytanie pliku jako RDD (linia tekstu = jeden rekord) ---
 lines_rdd = sc.textFile(csv_path)
 if IN_DOCKER:
     header = lines_rdd.first()
@@ -119,7 +110,6 @@ records_rdd = (
     .filter(lambda row: row is not None)
 )
 
-# --- 2. Akcje: count, collect (mała próbka) ---
 row_count = records_rdd.count()
 print(f"Liczba wierszy (po parsowaniu): {row_count}")
 
@@ -128,8 +118,6 @@ print("=== collect/take — 3 pierwsze rekordy ===")
 for rec in sample:
     print(rec)
 
-# --- 3. map + filter ---
-# Tylko oddział A, mapujemy na kwotę sprzedaży
 branch_a_totals = (
     records_rdd.filter(lambda r: r["branch"] == "A")
     .map(lambda r: r["total"])
@@ -137,7 +125,6 @@ branch_a_totals = (
 
 high_rating = records_rdd.filter(lambda r: r["rating"] >= 9.0)
 
-# --- 4. reduce — suma kolumny Total (cały zbiór) ---
 sum_total = records_rdd.map(lambda r: r["total"]).reduce(lambda a, b: a + b)
 sum_total_branch_a = branch_a_totals.reduce(lambda a, b: a + b)
 avg_rating = records_rdd.map(lambda r: r["rating"]).reduce(lambda a, b: a + b) / row_count
@@ -147,7 +134,6 @@ print(f"Suma Total — oddział A: {sum_total_branch_a:.2f}")
 print(f"Średnia Rating: {avg_rating:.2f}")
 print(f"Liczba transakcji z Rating >= 9.0: {high_rating.count()}")
 
-# --- 5. map + reduceByKey — suma sprzedaży per miasto ---
 city_sales = (
     records_rdd.map(lambda r: (r["city"], r["total"]))
     .reduceByKey(lambda a, b: a + b)
@@ -158,7 +144,6 @@ print("=== Suma sprzedaży per miasto (reduceByKey) ===")
 for city, total in sorted(city_sales, key=lambda x: x[1], reverse=True):
     print(f"  {city}: {total:.2f}")
 
-# --- 6. collect — top 5 najwyższych transakcji (po mapowaniu) ---
 top5 = (
     records_rdd.map(lambda r: (r["total"], r["city"], r["product_line"]))
     .sortBy(lambda x: x[0], ascending=False)
